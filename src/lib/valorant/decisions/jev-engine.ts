@@ -72,7 +72,7 @@ function createHttpTransport(config: JevEngineConfig): JevTransport {
       statusCodes: [408, 429, 500, 502, 503, 504],
       backoffLimit: 10_000,
     },
-    timeout: 5000,
+    timeout: 15000,
   })
   return (payload) => client.post("v1/systemone", { json: payload }).json()
 }

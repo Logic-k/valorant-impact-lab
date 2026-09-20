@@ -8,6 +8,8 @@ type PageProps = {
   readonly searchParams?: Promise<Record<string, string | readonly string[] | undefined>>
 }
 
+export const maxDuration = 300
+
 const DEFAULT_LOOKUP: PlayerLookup = {
   name: "Henrik3",
   tag: "VALO",

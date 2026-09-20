@@ -3,6 +3,8 @@ import { withRoundDecisions } from "@/lib/valorant/decisions/apply"
 import { createValorantDataProvider } from "@/lib/valorant/providers/data-provider"
 import type { PlayerLookup, ValorantRegion } from "@/lib/valorant/types"
 
+export const maxDuration = 300
+
 const DEFAULT_LOOKUP: PlayerLookup = {
   name: "Henrik3",
   tag: "VALO",
