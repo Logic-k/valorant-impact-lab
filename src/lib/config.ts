@@ -20,7 +20,7 @@ export function readConfig(): AppConfig {
     HENRIKDEV_API_KEY: process.env["HENRIKDEV_API_KEY"],
     HENRIKDEV_BASE_URL: process.env["HENRIKDEV_BASE_URL"],
     ANALYSIS_ENGINE: process.env["ANALYSIS_ENGINE"],
-    TYPESAFE_API_KEY: process.env["TYPESAFE_API_KEY"],
+    TYPESAFE_API_KEY: process.env["TYPESAFE_API_KEY"] ?? process.env["VERCEL_OIDC_TOKEN"],
     TYPESAFE_BASE_URL: process.env["TYPESAFE_BASE_URL"],
     TYPESAFE_MODEL: process.env["TYPESAFE_MODEL"],
     DECISION_MAX_ROUNDS: process.env["DECISION_MAX_ROUNDS"],
