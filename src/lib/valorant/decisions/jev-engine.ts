@@ -66,7 +66,12 @@ function createHttpTransport(config: JevEngineConfig): JevTransport {
   const client = ky.create({
     prefixUrl: config.baseUrl.replace(/\/$/, ""),
     headers: { Authorization: `Bearer ${config.apiKey}` },
-    retry: { limit: 1, statusCodes: [408, 500, 502, 503, 504] },
+    retry: {
+      limit: 3,
+      methods: ["post"],
+      statusCodes: [408, 429, 500, 502, 503, 504],
+      backoffLimit: 10_000,
+    },
     timeout: 5000,
   })
   return (payload) => client.post("v1/systemone", { json: payload }).json()

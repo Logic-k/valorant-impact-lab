@@ -8,13 +8,13 @@ export const ROUND_REVIEW_KEY = "needs_review"
 export const TIER_LABELS = ["저기여", "보통", "고기여"] as const
 
 export const ROUND_REASON_CRITERIA = {
-  "고기여 패배": "팀은 라운드를 졌지만 이 플레이어의 킬·데미지·생존 기여가 비정상적으로 컸다",
+  "고기여 패배": "팀이 패배했지만 이 플레이어의 기여 점수가 360 이상으로 매우 높았다",
   "첫 데스 후 미교환": "이 플레이어가 라운드 첫 사망자였고 팀이 그 데스를 교환하지 못했다",
-  "고비용 언트레이드 데스": "비싼 장비를 보유한 채 사망했고 교환되지 않아 경제 손실이 컸다",
-  "첫 킬로 라운드 개입": "이 플레이어가 라운드 첫 킬을 만들어 교전을 열었다",
-  "저기여 승리": "팀은 이겼지만 이 플레이어의 기여가 작았다",
-  "사망 후 교환 성공": "이 플레이어가 사망했지만 팀이 5초 내 교환에 성공했다",
-  "안정 라운드": "특별한 사건 없이 무난하게 끝난 라운드",
+  "고비용 언트레이드 데스": "이 플레이어가 3000 이상을 소비한 후 사망했고 교환되지 않았다",
+  "첫 킬로 라운드 개입": "이 플레이어가 라운드 첫 킬을 기록했다",
+  "저기여 승리": "팀이 승리했지만 이 플레이어의 기여 점수가 180 미만으로 낮았다",
+  "사망 후 교환 성공": "이 플레이어가 사망했지만 팀이 곧바로 교환했다",
+  "안정 라운드": "위 유형 중 어느 것에도 해당하지 않는 평범한 라운드",
 } as const
 
 export function roundQuestions(): readonly DecisionQuestion[] {
@@ -23,7 +23,7 @@ export function roundQuestions(): readonly DecisionQuestion[] {
       kind: "choice",
       key: ROUND_REASON_KEY,
       instructions:
-        "라운드 상태를 보고, 이 플레이어의 라운드를 가장 잘 설명하는 판정 유형 하나를 고른다",
+        "라운드 상태를 보고 판정 유형 하나를 고른다. 여러 유형이 동시에 성립하면 criteria에 먼저 나열된 유형을 우선한다",
       criteria: ROUND_REASON_CRITERIA,
     },
     {
@@ -58,7 +58,7 @@ export function roundState(round: RoundReport): string {
   ].filter((flag) => flag !== null)
   return [
     `맵 ${round.mapName} / 라운드 ${round.round} / 결과 ${round.result === "win" ? "승리" : "패배"}`,
-    `기록: ${round.kills}킬 ${round.assists}어시 ${round.damage}딜 점수${round.score}`,
+    `기록: ${round.kills}킬 ${round.assists}어시 ${round.damage}딜 점수${round.score} / 기여 점수 ${round.contributionScore}`,
     `경제: 로드아웃 ${round.loadoutValue} / 소비 ${round.spent} / 잔여 ${round.remaining} / 무기 ${round.weaponName} / 방어구 ${round.armorName}`,
     `상태: ${flags.join(", ")}`,
   ].join("\n")
