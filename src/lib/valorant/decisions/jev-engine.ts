@@ -1,4 +1,4 @@
-import ky from "ky"
+import ky, { HTTPError } from "ky"
 import { z } from "zod"
 
 import type {
@@ -50,7 +50,14 @@ export class JevEngine implements DecisionEngine {
       model: this.model,
       questions: toPayloadQuestions(questions),
     }
-    const response = JevResponseSchema.parse(await this.transport(payload))
+    const raw = await this.transport(payload).catch(async (error: unknown) => {
+      if (error instanceof HTTPError) {
+        const body = await error.response.text().catch(() => "")
+        throw new Error(`Jev API ${error.response.status}: ${body.slice(0, 300)}`)
+      }
+      throw error
+    })
+    const response = JevResponseSchema.parse(raw)
     return questions.map((question) => toAnswer(question, response.answers[question.key]))
   }
 }

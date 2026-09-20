@@ -39,7 +39,8 @@ export class ComparingEngine implements DecisionEngine {
   ): Promise<readonly DecisionAnswer[]> {
     try {
       return await this.jev.decide(input, questions)
-    } catch {
+    } catch (error) {
+      console.warn("[decisions] jev call failed, using rules fallback:", errorMessage(error))
       return this.rules.decide(input, questions)
     }
   }
@@ -50,10 +51,15 @@ export class ComparingEngine implements DecisionEngine {
   ): Promise<readonly DecisionAnswer[]> {
     try {
       return await this.jev.decide(input, questions)
-    } catch {
+    } catch (error) {
+      console.warn("[decisions] jev shadow call failed:", errorMessage(error))
       return []
     }
   }
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function mergeShadow(answer: DecisionAnswer, shadow: DecisionAnswer | undefined): DecisionAnswer {

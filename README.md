@@ -30,6 +30,20 @@ Round labeling is abstracted behind a `DecisionEngine` (`src/lib/valorant/decisi
 
 Jev mode sends each scored round's state plus three questions (reason choice, contribution score, needs-review noul) to `POST {TYPESAFE_BASE_URL}/v1/systemone`. Answers carry calibrated confidence, which the UI renders as a confidence chip on each reviewed round.
 
+### Free usage options
+
+- **`rules`**: fully free, no external calls. This is the default.
+- **Jev via Vercel AI Gateway**: free during the launch promo (through 2026-09-25; a card on file is required). Point the same engine at the gateway — no code changes needed:
+
+```bash
+ANALYSIS_ENGINE=jev-shadow
+TYPESAFE_BASE_URL=https://ai-gateway.vercel.sh/typesafe
+TYPESAFE_API_KEY=<AI_GATEWAY_API_KEY or VERCEL_OIDC_TOKEN>
+TYPESAFE_MODEL=typesafe-ai/jev
+```
+
+Gateway keys: `npx vercel@latest ai-gateway api-keys create --name valorant-impact-lab`. On Vercel deployments an OIDC token is issued automatically (`vercel env pull` for local, expires after 12h). After the promo the rate is $0.042/MTok input — roughly $0.0005 per analyzed profile at `DECISION_MAX_ROUNDS=40`.
+
 `DECISION_MAX_ROUNDS` caps how many rounds are sent to the model (highest review priority first); `DECISION_CONCURRENCY` bounds parallel calls.
 
 ## Local Setup
