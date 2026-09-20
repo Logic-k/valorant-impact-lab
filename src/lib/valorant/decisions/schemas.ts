@@ -1,5 +1,5 @@
 import type { DecisionQuestion } from "@/lib/valorant/decisions/engine"
-import type { RoundReport } from "@/lib/valorant/types"
+import type { PlayerProfile, RoundReport } from "@/lib/valorant/types"
 
 export const ROUND_REASON_KEY = "round_reason"
 export const ROUND_TIER_KEY = "contribution_tier"
@@ -67,4 +67,77 @@ export function roundState(round: RoundReport): string {
 export function tierLabelForScore(score: number): string {
   const index = Math.min(Math.max(Math.round(score), 0), TIER_LABELS.length - 1)
   return TIER_LABELS[index] ?? "보통"
+}
+
+export const PROFILE_STRONG_AXIS_KEY = "profile_strong_axis"
+export const PROFILE_WEAK_AXIS_KEY = "profile_weak_axis"
+export const PROFILE_FORM_KEY = "profile_form_trend"
+export const PROFILE_AGENT_KEY = "profile_agent_pick"
+
+export const PROFILE_AXES = {
+  "교전 생산성": "평균 ACS — 라운드 교전에서 만드는 직접 생산성",
+  "데미지 압박": "평균 ADR — 킬과 무관하게 매 라운드 쌓는 체력 압박",
+  "교전 효율": "K/D — 데스를 내주지 않고 킬을 가져가는 효율",
+  "팀 연계": "경기당 어시스트 — 유틸·트레이드로 팀 교전을 잇는 기여",
+} as const
+
+export const PROFILE_FORM_CRITERIA = {
+  상승세: "최근 경기의 승률과 전투 지표가 평소 평균보다 좋아지고 있다",
+  유지: "최근 경기가 평소 수준과 큰 차이 없이 유지되고 있다",
+  하락세: "최근 경기의 승률과 전투 지표가 평소 평균보다 떨어지고 있다",
+} as const
+
+export const PROFILE_AGENT_SLOTS = 8
+const PROFILE_RECENT_MATCHES = 8
+
+export function profileQuestions(profile: PlayerProfile): readonly DecisionQuestion[] {
+  const agentCriteria: Record<string, string> = {}
+  for (const agent of profile.insights.agentBreakdown.slice(0, PROFILE_AGENT_SLOTS)) {
+    agentCriteria[agent.name] =
+      `${agent.name} — ${agent.matches}경기 · 승률 ${agent.winRate}% · ACS ${agent.averageAcs} · K/D ${agent.kdRatio} · 기여 ${agent.impactScore}`
+  }
+  return [
+    {
+      kind: "choice",
+      key: PROFILE_STRONG_AXIS_KEY,
+      instructions:
+        "평균 지표를 보고 이 선수의 지표들 중 상대적으로 가장 강한 축 하나를 고른다. 절대 수치가 높지 않아도 이 선수 안에서 가장 나은 축을 고른다",
+      criteria: PROFILE_AXES,
+    },
+    {
+      kind: "choice",
+      key: PROFILE_WEAK_AXIS_KEY,
+      instructions: "평균 지표를 보고 이 선수의 지표들 중 상대적으로 가장 약한 축 하나를 고른다",
+      criteria: PROFILE_AXES,
+    },
+    {
+      kind: "choice",
+      key: PROFILE_FORM_KEY,
+      instructions: "최근 경기 목록의 결과와 지표를 평소 평균과 비교해 현재 폼 추세를 고른다",
+      criteria: PROFILE_FORM_CRITERIA,
+    },
+    {
+      kind: "choice",
+      key: PROFILE_AGENT_KEY,
+      instructions:
+        "요원별 기록을 보고 이 선수가 집중 연습했을 때 성과 향상 가능성이 가장 큰 요원 하나를 고른다",
+      criteria: agentCriteria,
+    },
+  ]
+}
+
+export function profileState(profile: PlayerProfile): string {
+  const summary = profile.summary
+  const perMatchAssists = summary.matches > 0 ? (summary.assists / summary.matches).toFixed(1) : "0"
+  const recent = profile.recentMatches
+    .slice(0, PROFILE_RECENT_MATCHES)
+    .map(
+      (match) =>
+        `${match.result === "win" ? "승" : "패"} ${match.score} ACS${match.acs} ${match.agent}@${match.mapName}`,
+    )
+  return [
+    `플레이어 ${profile.displayName}#${profile.tag} (${profile.region}) / 랭크 ${profile.rank} / 경쟁전 ${summary.matches}경기`,
+    `평균 지표: 승률 ${summary.winRate}% / ACS ${summary.averageAcs} / ADR ${summary.adr} / K/D ${summary.kdRatio} / 헤드샷 ${summary.headshotRate}% / 경기당 어시스트 ${perMatchAssists} / 통합 기여 ${profile.insights.impactScore}`,
+    `최근 경기(최신순): ${recent.length > 0 ? recent.join(" | ") : "없음"}`,
+  ].join("\n")
 }

@@ -30,6 +30,10 @@ Round labeling is abstracted behind a `DecisionEngine` (`src/lib/valorant/decisi
 
 Jev mode sends each scored round's state plus three questions (reason choice, contribution score, needs-review noul) to `POST {TYPESAFE_BASE_URL}/v1/systemone`. Answers carry calibrated confidence, which the UI renders as a confidence chip on each reviewed round.
 
+A second batch of profile-level questions runs once per profile: form trend (`상승세/유지/하락세`), a focus-agent pick over the top 8 agents, and the player's relatively strongest/weakest stat axis. The last two exist because threshold rules leave `strengths`/`risks` empty for average players — relative judgment still produces an answer. Rendered as the "AI 판정" card in the overview tab, with the shadow engine's divergent answers shown for comparison.
+
+Resilience: the Jev client retries POSTs on 429/5xx (3 attempts, backoff), and the comparing engine opens a circuit after 3 consecutive Jev failures — remaining rounds in that run go straight to rules.
+
 ### Free usage options
 
 - **`rules`**: fully free, no external calls. This is the default.
@@ -45,6 +49,8 @@ TYPESAFE_MODEL=typesafe-ai/jev
 Gateway keys: `npx vercel@latest ai-gateway api-keys create --name valorant-impact-lab`. On Vercel deployments an OIDC token is issued automatically (`vercel env pull` for local, expires after 12h). After the promo the rate is $0.042/MTok input — roughly $0.0005 per analyzed profile at `DECISION_MAX_ROUNDS=40`.
 
 `DECISION_MAX_ROUNDS` caps how many rounds are sent to the model (highest review priority first); `DECISION_CONCURRENCY` bounds parallel calls.
+
+`scripts/generate-report.mjs` renders a self-contained HTML report from extracted decision JSON: `node scripts/generate-report.mjs <data.json> [output.html]`.
 
 ## Local Setup
 

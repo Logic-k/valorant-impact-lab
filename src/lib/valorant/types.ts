@@ -64,6 +64,18 @@ export type PerformanceBreakdown = {
   readonly impactScore: number
 }
 
+export type ProfileDecision = {
+  readonly engine: string
+  readonly formTrend?: string
+  readonly formConfidence?: number
+  readonly recommendedAgent?: string
+  readonly agentConfidence?: number
+  readonly strongAxis?: string
+  readonly weakAxis?: string
+  readonly formShadow?: string
+  readonly agentShadow?: string
+}
+
 export type PerformanceInsights = {
   readonly coverage: DataCoverage
   readonly impactScore: number
@@ -73,6 +85,7 @@ export type PerformanceInsights = {
   readonly agentBreakdown: readonly PerformanceBreakdown[]
   readonly mapBreakdown: readonly PerformanceBreakdown[]
   readonly periodBreakdown: readonly PerformanceBreakdown[]
+  readonly profileDecision?: ProfileDecision
 }
 
 export type RoundMapEvent = {

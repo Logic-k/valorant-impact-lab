@@ -6,8 +6,11 @@ import type {
   DecisionQuestion,
 } from "@/lib/valorant/decisions/engine"
 
+const CIRCUIT_LIMIT = 3
+
 export class ComparingEngine implements DecisionEngine {
   readonly name: DecisionEngineName
+  private consecutiveJevFailures = 0
 
   constructor(
     private readonly jev: DecisionEngine,
@@ -33,14 +36,23 @@ export class ComparingEngine implements DecisionEngine {
     )
   }
 
+  private get jevOpen(): boolean {
+    return this.consecutiveJevFailures < CIRCUIT_LIMIT
+  }
+
   private async jevOrFallback(
     input: DecisionInput,
     questions: readonly DecisionQuestion[],
   ): Promise<readonly DecisionAnswer[]> {
+    if (!this.jevOpen) {
+      return this.rules.decide(input, questions)
+    }
     try {
-      return await this.jev.decide(input, questions)
+      const answers = await this.jev.decide(input, questions)
+      this.consecutiveJevFailures = 0
+      return answers
     } catch (error) {
-      console.warn("[decisions] jev call failed, using rules fallback:", errorMessage(error))
+      this.recordFailure("jev call failed, using rules fallback", error)
       return this.rules.decide(input, questions)
     }
   }
@@ -49,11 +61,27 @@ export class ComparingEngine implements DecisionEngine {
     input: DecisionInput,
     questions: readonly DecisionQuestion[],
   ): Promise<readonly DecisionAnswer[]> {
-    try {
-      return await this.jev.decide(input, questions)
-    } catch (error) {
-      console.warn("[decisions] jev shadow call failed:", errorMessage(error))
+    if (!this.jevOpen) {
       return []
+    }
+    try {
+      const answers = await this.jev.decide(input, questions)
+      this.consecutiveJevFailures = 0
+      return answers
+    } catch (error) {
+      this.recordFailure("jev shadow call failed", error)
+      return []
+    }
+  }
+
+  private recordFailure(context: string, error: unknown): void {
+    this.consecutiveJevFailures += 1
+    console.warn(
+      `[decisions] ${context} (${this.consecutiveJevFailures}/${CIRCUIT_LIMIT}):`,
+      errorMessage(error),
+    )
+    if (!this.jevOpen) {
+      console.warn("[decisions] jev circuit open — skipping remaining jev calls this run")
     }
   }
 }

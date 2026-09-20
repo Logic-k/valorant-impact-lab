@@ -120,6 +120,13 @@ function risks(matches: readonly MatchDigest[]): readonly string[] {
     .slice(0, 3)
 }
 
+export const SIGNAL_LIMITS = {
+  acs: { strongAt: 230, weakAt: 160 },
+  adr: { strongAt: 145, weakAt: 105 },
+  kd: { strongAt: 1.15, weakAt: 0.85 },
+  assists: { strongAt: 6, weakAt: 3 },
+} as const
+
 function baseSignals(matches: readonly MatchDigest[]) {
   const kills = matches.reduce((sum, match) => sum + match.kills, 0)
   const deaths = matches.reduce((sum, match) => sum + match.deaths, 0)
@@ -128,8 +135,7 @@ function baseSignals(matches: readonly MatchDigest[]) {
   return [
     {
       value: average(matches.map((match) => match.acs)),
-      strongAt: 230,
-      weakAt: 160,
+      ...SIGNAL_LIMITS.acs,
       strongLabel: "교전 생산성이 높아 라운드 초반 영향력이 큽니다.",
       weakLabel: "ACS가 낮아 직접 교전 기여를 끌어올릴 여지가 있습니다.",
     },
@@ -138,22 +144,19 @@ function baseSignals(matches: readonly MatchDigest[]) {
         matches.map((match) => match.adr),
         1,
       ),
-      strongAt: 145,
-      weakAt: 105,
+      ...SIGNAL_LIMITS.adr,
       strongLabel: "ADR이 높아 킬이 없어도 체력 압박을 꾸준히 만듭니다.",
       weakLabel: "ADR이 낮아 교전 전 데미지 교환을 더 만들어야 합니다.",
     },
     {
       value: ratio(kills, deaths, 2),
-      strongAt: 1.15,
-      weakAt: 0.85,
+      ...SIGNAL_LIMITS.kd,
       strongLabel: "K/D가 안정적이라 불리한 데스 누수가 적습니다.",
       weakLabel: "K/D가 낮아 첫 교전 선택과 생존 판단 점검이 필요합니다.",
     },
     {
       value: assists / matchCount,
-      strongAt: 6,
-      weakAt: 3,
+      ...SIGNAL_LIMITS.assists,
       strongLabel: "어시스트 밀도가 좋아 팀 교전 연결에 기여합니다.",
       weakLabel: "어시스트 밀도가 낮아 유틸/트레이드 연결 지표가 약합니다.",
     },

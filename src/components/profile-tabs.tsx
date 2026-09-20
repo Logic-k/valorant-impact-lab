@@ -1,6 +1,11 @@
 import { MatchesPanel } from "@/components/matches-panel"
 import { RoundDetailPanel } from "@/components/round-detail-panel"
-import type { PentagonScore, PerformanceBreakdown, PlayerProfile } from "@/lib/valorant/types"
+import type {
+  PentagonScore,
+  PerformanceBreakdown,
+  PlayerProfile,
+  ProfileDecision,
+} from "@/lib/valorant/types"
 
 type ProfileTabsProps = {
   readonly profile: PlayerProfile
@@ -82,6 +87,9 @@ function OverviewPanel({ profile }: ProfileTabsProps) {
         items={insights.risks}
         emptyText="뚜렷한 위험 신호가 아직 없습니다."
       />
+      {insights.profileDecision === undefined ? null : (
+        <ProfileDecisionCard decision={insights.profileDecision} />
+      )}
       <div className="coverage-note">
         <h4>데이터 범위</h4>
         <p>
@@ -157,6 +165,36 @@ function BreakdownTable({ rows }: { readonly rows: readonly PerformanceBreakdown
         ))}
       </tbody>
     </table>
+  )
+}
+
+function ProfileDecisionCard({ decision }: { readonly decision: ProfileDecision }) {
+  const shadowParts = [
+    decision.formShadow === undefined ? null : `폼 ${decision.formShadow}`,
+    decision.agentShadow === undefined ? null : `요원 ${decision.agentShadow}`,
+  ].filter((part) => part !== null)
+  const percent = (value: number | undefined) => `${Math.round((value ?? 0) * 100)}%`
+  return (
+    <div className="insight-list profile-decision">
+      <h4>
+        AI 판정 <span className="decision-engine">{decision.engine}</span>
+      </h4>
+      <ul>
+        {decision.formTrend === undefined ? null : (
+          <li>
+            폼 추세: {decision.formTrend} · {percent(decision.formConfidence)}
+          </li>
+        )}
+        {decision.recommendedAgent === undefined ? null : (
+          <li>
+            집중 추천 요원: {decision.recommendedAgent} · {percent(decision.agentConfidence)}
+          </li>
+        )}
+        {decision.strongAxis === undefined ? null : <li>상대 강점 축: {decision.strongAxis}</li>}
+        {decision.weakAxis === undefined ? null : <li>보완 축: {decision.weakAxis}</li>}
+        {shadowParts.length === 0 ? null : <li>대조 엔진 판정: {shadowParts.join(" · ")}</li>}
+      </ul>
+    </div>
   )
 }
 

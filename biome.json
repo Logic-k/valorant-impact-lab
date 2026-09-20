@@ -15,7 +15,8 @@
       "!dist",
       "!coverage",
       "!pnpm-lock.yaml",
-      "!next-env.d.ts"
+      "!next-env.d.ts",
+      "!*.html"
     ]
   },
   "formatter": {

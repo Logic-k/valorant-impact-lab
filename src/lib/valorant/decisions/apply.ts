@@ -6,6 +6,12 @@ import type {
 } from "@/lib/valorant/decisions/engine"
 import { createDecisionEngine } from "@/lib/valorant/decisions/factory"
 import {
+  PROFILE_AGENT_KEY,
+  PROFILE_FORM_KEY,
+  PROFILE_STRONG_AXIS_KEY,
+  PROFILE_WEAK_AXIS_KEY,
+  profileQuestions,
+  profileState,
   ROUND_REASON_KEY,
   ROUND_REVIEW_KEY,
   ROUND_TIER_KEY,
@@ -15,7 +21,9 @@ import {
 } from "@/lib/valorant/decisions/schemas"
 import type {
   DecisionSummary,
+  PerformanceInsights,
   PlayerProfile,
+  ProfileDecision,
   RoundDecision,
   RoundDetailInsights,
   RoundReport,
@@ -35,13 +43,31 @@ export async function withRoundDecisions(
 ): Promise<PlayerProfile> {
   try {
     const engine = createDecisionEngine(config)
-    const roundDetails = await applyRoundDecisions(profile.roundDetails, engine, {
-      maxRounds: config.DECISION_MAX_ROUNDS,
-      concurrency: config.DECISION_CONCURRENCY,
-    })
-    return { ...profile, roundDetails }
+    const [roundDetails, insights] = await Promise.all([
+      applyRoundDecisions(profile.roundDetails, engine, {
+        maxRounds: config.DECISION_MAX_ROUNDS,
+        concurrency: config.DECISION_CONCURRENCY,
+      }),
+      applyProfileDecision(profile, engine),
+    ])
+    return { ...profile, roundDetails, insights }
   } catch {
     return profile
+  }
+}
+
+export async function applyProfileDecision(
+  profile: PlayerProfile,
+  engine: DecisionEngine,
+): Promise<PerformanceInsights> {
+  try {
+    const answers = await engine.decide(
+      { state: profileState(profile), profile },
+      profileQuestions(profile),
+    )
+    return { ...profile.insights, profileDecision: toProfileDecision(engine.name, answers) }
+  } catch {
+    return profile.insights
   }
 }
 
@@ -118,6 +144,29 @@ function toRoundDecision(
     ...(tier?.score === undefined ? {} : { tierLabel: tierLabelForScore(tier.score) }),
     reviewScore: review?.noul ?? 0,
     ...(comparison === undefined ? {} : { comparison }),
+  }
+}
+
+function toProfileDecision(
+  engine: DecisionEngineName,
+  answers: readonly DecisionAnswer[],
+): ProfileDecision {
+  const form = answers.find((answer) => answer.key === PROFILE_FORM_KEY)
+  const agent = answers.find((answer) => answer.key === PROFILE_AGENT_KEY)
+  const strong = answers.find((answer) => answer.key === PROFILE_STRONG_AXIS_KEY)
+  const weak = answers.find((answer) => answer.key === PROFILE_WEAK_AXIS_KEY)
+  return {
+    engine,
+    ...(form?.choice === undefined
+      ? {}
+      : { formTrend: form.choice, formConfidence: form.confidence }),
+    ...(agent?.choice === undefined
+      ? {}
+      : { recommendedAgent: agent.choice, agentConfidence: agent.confidence }),
+    ...(strong?.choice === undefined ? {} : { strongAxis: strong.choice }),
+    ...(weak?.choice === undefined ? {} : { weakAxis: weak.choice }),
+    ...(form?.shadowChoice === undefined ? {} : { formShadow: form.shadowChoice }),
+    ...(agent?.shadowChoice === undefined ? {} : { agentShadow: agent.shadowChoice }),
   }
 }
 

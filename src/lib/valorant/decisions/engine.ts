@@ -1,4 +1,4 @@
-import type { RoundReport } from "@/lib/valorant/types"
+import type { PlayerProfile, RoundReport } from "@/lib/valorant/types"
 
 export const DECISION_ENGINES = ["rules", "jev", "jev-shadow"] as const
 export type DecisionEngineName = (typeof DECISION_ENGINES)[number]
@@ -20,7 +20,8 @@ export type DecisionQuestion =
 
 export type DecisionInput = {
   readonly state: string
-  readonly round: RoundReport
+  readonly round?: RoundReport
+  readonly profile?: PlayerProfile
 }
 
 export type DecisionAnswer = {

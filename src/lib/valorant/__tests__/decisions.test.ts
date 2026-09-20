@@ -1,12 +1,23 @@
 import { describe, expect, it } from "vitest"
 import type { AppConfig } from "@/lib/config"
-import { applyRoundDecisions } from "@/lib/valorant/decisions/apply"
+import { applyProfileDecision, applyRoundDecisions } from "@/lib/valorant/decisions/apply"
 import { ComparingEngine } from "@/lib/valorant/decisions/comparing-engine"
 import { createDecisionEngine } from "@/lib/valorant/decisions/factory"
 import { JevEngine } from "@/lib/valorant/decisions/jev-engine"
 import { RulesEngine } from "@/lib/valorant/decisions/rules-engine"
-import { roundQuestions, roundState } from "@/lib/valorant/decisions/schemas"
-import type { RoundDetailInsights, RoundReport } from "@/lib/valorant/types"
+import {
+  profileQuestions,
+  profileState,
+  roundQuestions,
+  roundState,
+} from "@/lib/valorant/decisions/schemas"
+import type {
+  MatchDigest,
+  PerformanceInsights,
+  PlayerProfile,
+  RoundDetailInsights,
+  RoundReport,
+} from "@/lib/valorant/types"
 
 function makeRound(overrides: Partial<RoundReport> = {}): RoundReport {
   return {
@@ -86,6 +97,112 @@ function makeDetails(rounds: readonly RoundReport[]): RoundDetailInsights {
     ],
     reviewRounds: rounds,
     mapEvents: [],
+  }
+}
+
+function makeMatch(overrides: Partial<MatchDigest> = {}): MatchDigest {
+  return {
+    id: `match-${Math.random()}`,
+    mapName: "Ascent",
+    agent: "Sova",
+    mode: "Competitive",
+    result: "win",
+    score: "13-10",
+    acs: 220,
+    kills: 18,
+    deaths: 14,
+    assists: 6,
+    kdRatio: 1.29,
+    kast: 0,
+    adr: 150,
+    headshotRate: 20,
+    tradeValue: 50,
+    entryImpact: 50,
+    postPlantImpact: 50,
+    teamLuck: 50,
+    narrative: "",
+    startedAt: "2026-09-01T10:00:00.000Z",
+    ...overrides,
+  }
+}
+
+function makeInsights(overrides: Partial<PerformanceInsights> = {}): PerformanceInsights {
+  return {
+    coverage: {
+      storedMatches: 100,
+      competitiveMatches: 100,
+      rangeLabel: "2026-01-01 ~ 2026-09-01",
+      seasonMode: "stored_range",
+      limitation: "test",
+    },
+    impactScore: 62,
+    impactLabel: "보통",
+    strengths: [],
+    risks: [],
+    agentBreakdown: [
+      {
+        name: "Sova",
+        matches: 40,
+        winRate: 50,
+        averageAcs: 213,
+        kdRatio: 1.03,
+        adr: 144.3,
+        headshotRate: 19.6,
+        impactScore: 62,
+      },
+      {
+        name: "Fade",
+        matches: 20,
+        winRate: 57,
+        averageAcs: 219,
+        kdRatio: 1.09,
+        adr: 143.3,
+        headshotRate: 19.8,
+        impactScore: 65,
+      },
+    ],
+    mapBreakdown: [],
+    periodBreakdown: [],
+    ...overrides,
+  }
+}
+
+function makeProfile(overrides: Partial<PlayerProfile> = {}): PlayerProfile {
+  return {
+    displayName: "TestPlayer",
+    tag: "KR1",
+    region: "kr",
+    accountLevel: 100,
+    rank: "Platinum 2",
+    rr: 40,
+    source: "mock",
+    sourceLabel: "test",
+    consentState: "demo",
+    summary: {
+      matches: 100,
+      winRate: 50,
+      averageAcs: 214,
+      kills: 1800,
+      deaths: 1700,
+      assists: 530,
+      kdRatio: 1.03,
+      kast: 0,
+      adr: 143.5,
+      headshotRate: 19.4,
+      teamLuck: 41,
+      recentTeamLuck: 41,
+    },
+    pentagon: { combat: 70, survival: 50, utility: 40, control: 55, entry: 60 },
+    insights: makeInsights(),
+    roundDetails: makeDetails([]),
+    recentMatches: [
+      makeMatch({ result: "win", acs: 260 }),
+      makeMatch({ result: "win", acs: 250 }),
+      makeMatch({ result: "win", acs: 240 }),
+      makeMatch({ result: "loss", acs: 230 }),
+      makeMatch({ result: "win", acs: 255 }),
+    ],
+    ...overrides,
   }
 }
 
@@ -321,6 +438,72 @@ describe("applyRoundDecisions", () => {
     expect(enriched.decisionSummary?.engine).toBe("jev-shadow")
     expect(enriched.decisionSummary?.agreementRate).toBe(100)
     expect(enriched.rounds[0]?.decision?.comparison?.agree).toBe(true)
+  })
+})
+
+describe("profile decisions", () => {
+  it("rules engine answers profile questions with relative axes, form, and agent pick", async () => {
+    const engine = new RulesEngine()
+    const profile = makeProfile()
+    const answers = await engine.decide(
+      { state: profileState(profile), profile },
+      profileQuestions(profile),
+    )
+
+    const strong = answers.find((answer) => answer.key === "profile_strong_axis")
+    expect(strong?.choice).toBe("데미지 압박")
+    const weak = answers.find((answer) => answer.key === "profile_weak_axis")
+    expect(weak?.choice).toBe("교전 효율")
+    const form = answers.find((answer) => answer.key === "profile_form_trend")
+    expect(form?.choice).toBe("상승세")
+    const agent = answers.find((answer) => answer.key === "profile_agent_pick")
+    expect(agent?.choice).toBe("Fade")
+  })
+
+  it("applyProfileDecision attaches a profile decision to insights", async () => {
+    const jev = new JevEngine({
+      apiKey: "test",
+      baseUrl: "https://api.typesafe.ai",
+      model: "jev-latest",
+      transport: () =>
+        Promise.resolve({
+          answers: {
+            profile_strong_axis: { type: "choice", choice: "팀 연계", confidence: 0.7 },
+            profile_weak_axis: { type: "choice", choice: "교전 생산성", confidence: 0.6 },
+            profile_form_trend: { type: "choice", choice: "유지", confidence: 0.8 },
+            profile_agent_pick: { type: "choice", choice: "Sova", confidence: 0.9 },
+          },
+        }),
+    })
+    const engine = new ComparingEngine(jev, new RulesEngine(), "rules")
+    const insights = await applyProfileDecision(makeProfile(), engine)
+
+    expect(insights.profileDecision?.engine).toBe("jev-shadow")
+    expect(insights.profileDecision?.strongAxis).toBe("데미지 압박")
+    expect(insights.profileDecision?.recommendedAgent).toBe("Fade")
+    expect(insights.profileDecision?.formShadow).toBe("유지")
+    expect(insights.profileDecision?.agentShadow).toBe("Sova")
+  })
+
+  it("opens the circuit after repeated jev failures and stops calling the transport", async () => {
+    let calls = 0
+    const jev = new JevEngine({
+      apiKey: "test",
+      baseUrl: "https://api.typesafe.ai",
+      model: "jev-latest",
+      transport: () => {
+        calls += 1
+        return Promise.reject(new Error("gateway down"))
+      },
+    })
+    const engine = new ComparingEngine(jev, new RulesEngine(), "rules")
+
+    for (let index = 0; index < 7; index += 1) {
+      const round = makeRound({ round: index + 1 })
+      await engine.decide({ state: roundState(round), round }, QUESTIONS)
+    }
+
+    expect(calls).toBe(3)
   })
 })
 
