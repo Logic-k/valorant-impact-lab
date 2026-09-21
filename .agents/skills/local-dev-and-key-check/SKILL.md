@@ -73,4 +73,11 @@ UI: open `http://localhost:3000`, fill the form (inputs with aria-labels
 - `node: command not found` → `source ~/.nvm/nvm.sh`.
 - Root page `GET /` takes 60s+ → `ANALYSIS_ENGINE` is `jev-shadow` and Typesafe is rate-limiting; set `ANALYSIS_ENGINE=rules`.
 - `[decisions] jev shadow call failed ... 429` in server log → Typesafe rate limit, not a HenrikDev key problem.
-- Empty profile for a known player → wrong region (this account is `ap`, not `kr`).
+- For a negative UI check, search a unique nonexistent Riot ID and expect a provider warning plus an explicitly labeled `Mock fixture` fallback, not a crash. Restore the valid account afterward and confirm the warning disappears.
+- A wrong region is not a reliable negative test: the Henrik provider prefers the account's reported region over the lookup region (`providerRegion` in `henrik-transform.ts`). This test account is `ap`.
+- Korean text rendered as squares in a Linux test browser → install `fonts-noto-cjk` (refresh apt metadata first if no package candidate is available), then restart Chrome with `chrome://restart`; a page reload alone may retain missing-glyph rendering. This is browser environment setup, not an app code fix.
+
+## Devin Secrets Needed
+
+- `HENRIKDEV_API_KEY`, `HENRIKDEV_BASE_URL`, and `VALORANT_DATA_PROVIDER` (set to Henrik mode) for real-data verification.
+- `ANALYSIS_ENGINE` should be overridden to `rules` locally; Typesafe credentials are not required for that mode.
