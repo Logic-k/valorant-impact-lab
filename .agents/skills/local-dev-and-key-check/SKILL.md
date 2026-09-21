@@ -32,8 +32,11 @@ to respond. `rules` needs no external AI call and responds in ~3s.
 ```bash
 cd ~/repos/valorant-impact-lab && source ~/.nvm/nvm.sh
 export ANALYSIS_ENGINE=rules
-pnpm dev --hostname 0.0.0.0 --port 3000
+pnpm dev --hostname 127.0.0.1 --port 3000
 ```
+
+Bind to `127.0.0.1` by default: the server holds the API keys, so anyone who can reach it can
+spend them. Use `--hostname 0.0.0.0` only when a browser preview from another host is required.
 
 Run it in its own persistent shell (tty) so it stays alive. Ready when you see `✓ Ready`.
 Do not `pkill -f "next dev"` from a shell that shares the process group with the server.
