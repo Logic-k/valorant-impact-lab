@@ -132,6 +132,10 @@ export type DecisionSummary = {
   readonly agreementRate?: number
 }
 
+export type OpeningTeam = "own" | "enemy" | "none"
+
+export type BuyType = "eco" | "semi" | "full"
+
 export type RoundReport = {
   readonly matchId: string
   readonly mapName: string
@@ -146,6 +150,13 @@ export type RoundReport = {
   readonly untradedDeath: boolean
   readonly clutchAttempt: boolean
   readonly clutchWin: boolean
+  readonly clutchSize: number
+  readonly openingTeam: OpeningTeam
+  readonly tradeableDeath: boolean
+  readonly buyType: BuyType
+  readonly enemyBuyType: BuyType
+  readonly loadoutDelta: number
+  readonly econRating: number
   readonly kills: number
   readonly assists: number
   readonly damage: number
@@ -188,12 +199,41 @@ export type RoundDetailInsights = {
   readonly reviewRoundCount: number
   readonly averageLoadoutValue: number
   readonly averageSpent: number
+  readonly openingDuel: OpeningDuelInsights
+  readonly clutchBreakdown: readonly ClutchBreakdown[]
+  readonly buyBreakdown: readonly BuyBreakdown[]
+  readonly tradeableUntradedDeaths: number
+  readonly econRating: number
   readonly note: string
   readonly rounds: readonly RoundReport[]
   readonly matchReports: readonly RoundMatchReport[]
   readonly reviewRounds: readonly RoundReport[]
   readonly mapEvents: readonly RoundMapEvent[]
   readonly decisionSummary?: DecisionSummary
+}
+
+export type OpeningDuelInsights = {
+  readonly duels: number
+  readonly successRate: number
+  readonly participationRate: number
+  readonly teamFirstKillRounds: number
+  readonly teamFirstKillConversion: number
+  readonly teamFirstDeathRounds: number
+  readonly teamFirstDeathRecovery: number
+}
+
+export type ClutchBreakdown = {
+  readonly size: number
+  readonly attempts: number
+  readonly wins: number
+}
+
+export type BuyBreakdown = {
+  readonly buyType: BuyType
+  readonly rounds: number
+  readonly winRate: number
+  readonly mismatchRounds: number
+  readonly mismatchWinRate: number
 }
 
 export type RoundMatchReport = {

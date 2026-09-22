@@ -194,4 +194,30 @@ describe("round detail analysis", () => {
     ])
     expect(insights.reviewRounds[0]?.round).toBe(3)
   })
+
+  it("derives opening duel, man-advantage, clutch size and buy type signals", () => {
+    const insights = buildRoundDetailInsights(
+      { name: "땡주는바멍이래요", tag: "KR1", region: "kr" },
+      [DETAIL],
+    )
+
+    expect(insights.openingDuel).toEqual({
+      duels: 2,
+      successRate: 50,
+      participationRate: 67,
+      teamFirstKillRounds: 1,
+      teamFirstKillConversion: 0,
+      teamFirstDeathRounds: 2,
+      teamFirstDeathRecovery: 100,
+    })
+    expect(insights.clutchBreakdown).toEqual([{ size: 2, attempts: 1, wins: 1 }])
+    expect(insights.rounds[0]?.clutchSize).toBe(2)
+    expect(insights.rounds[0]?.openingTeam).toBe("enemy")
+    expect(insights.rounds[2]?.openingTeam).toBe("own")
+    expect(insights.rounds[0]?.buyType).toBe("full")
+    expect(insights.rounds[1]?.buyType).toBe("eco")
+    expect(insights.rounds[2]?.evidence).toContain("사망 후 3초 내 교환 없음 (교환 가능 아군 없음)")
+    expect(insights.rounds[2]?.econRating).toBe(60)
+    expect(insights.buyBreakdown.map((entry) => entry.buyType)).toEqual(["eco", "full"])
+  })
 })
