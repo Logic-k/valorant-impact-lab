@@ -12,6 +12,8 @@ import {
   MmrEnvelopeSchema,
   type StoredMatchData,
   StoredMatchesEnvelopeSchema,
+  type StoredMmrHistoryEntry,
+  StoredMmrHistoryEnvelopeSchema,
 } from "@/lib/valorant/providers/henrik-schemas"
 import { providerRegion, toProfile } from "@/lib/valorant/providers/henrik-transform"
 import { buildMockProfile } from "@/lib/valorant/sample"
@@ -58,12 +60,16 @@ export class HenrikDevProvider implements ValorantDataProvider {
     try {
       const account = await this.fetchAccount(lookup)
       const region = providerRegion(account, lookup.region)
-      const [mmr, matches] = await Promise.all([
+      const [mmr, matches, mmrHistory] = await Promise.all([
         this.fetchOptionalMmr(lookup, region),
         this.fetchStoredMatches(lookup, region),
+        this.fetchOptionalMmrHistory(lookup, region),
       ])
       const details = await this.fetchMatchDetails(detailCandidateIds(matches))
-      return { kind: "ready", value: toProfile(lookup, account, mmr, matches, details) }
+      return {
+        kind: "ready",
+        value: toProfile(lookup, account, mmr, matches, details, mmrHistory),
+      }
     } catch (error) {
       if (error instanceof HenrikDevUnavailableError) {
         return { kind: "unavailable", reason: error.message, fallback: buildMockProfile(lookup) }
@@ -116,6 +122,29 @@ export class HenrikDevProvider implements ValorantDataProvider {
     } catch (error) {
       if (error instanceof HTTPError && error.response.status === 404) {
         return null
+      }
+      throw error
+    }
+  }
+
+  private async fetchOptionalMmrHistory(
+    lookup: PlayerLookup,
+    region: ValorantRegion,
+  ): Promise<readonly StoredMmrHistoryEntry[]> {
+    try {
+      const response = await this.getJson(
+        `valorant/v2/stored-mmr-history/${region}/pc/${encodeURIComponent(
+          lookup.name,
+        )}/${encodeURIComponent(lookup.tag)}?size=40`,
+      )
+      const parsed = StoredMmrHistoryEnvelopeSchema.parse(response)
+      return parsed.data ?? []
+    } catch (error) {
+      if (error instanceof HTTPError && error.response.status === 404) {
+        return []
+      }
+      if (error instanceof ZodError) {
+        return []
       }
       throw error
     }

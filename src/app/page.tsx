@@ -1,5 +1,6 @@
 import { Dashboard } from "@/components/dashboard"
 import { readConfig } from "@/lib/config"
+import { getValorantAssets } from "@/lib/valorant/assets"
 import { withRoundDecisions } from "@/lib/valorant/decisions/apply"
 import { createValorantDataProvider } from "@/lib/valorant/providers/data-provider"
 import type { PlayerLookup, ValorantRegion } from "@/lib/valorant/types"
@@ -21,12 +22,22 @@ export default async function Home(props: PageProps) {
   const lookup = lookupFromSearchParams(searchParams)
   const config = readConfig()
   const provider = createValorantDataProvider(config)
-  const result = await provider.getPlayerProfile(lookup)
+  const [result, assets] = await Promise.all([
+    provider.getPlayerProfile(lookup),
+    getValorantAssets(),
+  ])
   const profile = result.kind === "ready" ? result.value : result.fallback
   const providerWarning = result.kind === "unavailable" ? result.reason : null
   const analyzed = await withRoundDecisions(profile, config)
 
-  return <Dashboard lookup={lookup} profile={analyzed} providerWarning={providerWarning} />
+  return (
+    <Dashboard
+      assets={assets}
+      lookup={lookup}
+      profile={analyzed}
+      providerWarning={providerWarning}
+    />
+  )
 }
 
 function lookupFromSearchParams(

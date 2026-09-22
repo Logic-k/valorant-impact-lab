@@ -1,14 +1,14 @@
+import { MapEventsPanel } from "@/components/map-events-panel"
 import { MatchesPanel } from "@/components/matches-panel"
+import { RadarChart } from "@/components/radar-chart"
+import { RankChart } from "@/components/rank-chart"
 import { RoundDetailPanel } from "@/components/round-detail-panel"
-import type {
-  PentagonScore,
-  PerformanceBreakdown,
-  PlayerProfile,
-  ProfileDecision,
-} from "@/lib/valorant/types"
+import type { ValorantAssets } from "@/lib/valorant/assets"
+import type { PerformanceBreakdown, PlayerProfile, ProfileDecision } from "@/lib/valorant/types"
 
 type ProfileTabsProps = {
   readonly profile: PlayerProfile
+  readonly assets: ValorantAssets
 }
 
 const TABS = [
@@ -17,10 +17,11 @@ const TABS = [
   ["maps", "맵"],
   ["periods", "기간"],
   ["rounds", "라운드"],
+  ["mapview", "지도"],
   ["matches", "경기"],
 ] as const
 
-export function ProfileTabs({ profile }: ProfileTabsProps) {
+export function ProfileTabs({ profile, assets }: ProfileTabsProps) {
   return (
     <section className="tabs panel" aria-label="상세 분석">
       {TABS.map(([id], index) => (
@@ -61,13 +62,21 @@ export function ProfileTabs({ profile }: ProfileTabsProps) {
           rows={profile.insights.periodBreakdown}
         />
         <RoundDetailPanel details={profile.roundDetails} />
-        <MatchesPanel matches={profile.recentMatches} />
+        <div className="tab-panel" data-panel="mapview">
+          <div className="panel-heading">
+            <p className="eyebrow">Map Events</p>
+            <h3>맵 이벤트 뷰</h3>
+            <p>match detail에 포함된 킬/데스/어시스트/플랜트/해제 좌표를 미니맵 위에 표시합니다.</p>
+          </div>
+          <MapEventsPanel events={profile.roundDetails.mapEvents} maps={assets.maps} />
+        </div>
+        <MatchesPanel assets={assets} matches={profile.recentMatches} />
       </div>
     </section>
   )
 }
 
-function OverviewPanel({ profile }: ProfileTabsProps) {
+function OverviewPanel({ profile }: { readonly profile: PlayerProfile }) {
   const insights = profile.insights
   return (
     <div className="tab-panel overview-panel" data-panel="overview">
@@ -76,7 +85,11 @@ function OverviewPanel({ profile }: ProfileTabsProps) {
         <strong>{insights.impactScore}</strong>
         <span>{insights.impactLabel}</span>
       </div>
-      <Pentagon scores={profile.pentagon} />
+      <div className="insight-list rank-history">
+        <h4>RR 추이</h4>
+        <RankChart history={profile.rankHistory} />
+      </div>
+      <RadarChart scores={profile.pentagon} />
       <InsightList
         title="강점"
         items={insights.strengths}
@@ -215,30 +228,6 @@ function InsightList({
           <li key={item}>{item}</li>
         ))}
       </ul>
-    </div>
-  )
-}
-
-function Pentagon({ scores }: { readonly scores: PentagonScore }) {
-  const entries = [
-    ["전투", scores.combat],
-    ["생존", scores.survival],
-    ["유틸", scores.utility],
-    ["통제", scores.control],
-    ["진입", scores.entry],
-  ] as const
-
-  return (
-    <div className="pentagon">
-      {entries.map(([label, value]) => (
-        <div className="bar-row" key={label}>
-          <span>{label}</span>
-          <div className="bar-track">
-            <div className="bar-fill" style={{ width: `${value}%` }} />
-          </div>
-          <strong>{value}</strong>
-        </div>
-      ))}
     </div>
   )
 }

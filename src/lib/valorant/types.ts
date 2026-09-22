@@ -42,6 +42,7 @@ export type MatchDigest = {
   readonly startedAt: string
   readonly accountLevel?: number
   readonly rankAtMatch?: string
+  readonly roundOutcomes?: readonly ("win" | "loss")[]
 }
 
 export type DataCoverage = {
@@ -96,6 +97,16 @@ export type RoundMapEvent = {
   readonly x: number
   readonly y: number
   readonly label: string
+}
+
+export type RankPoint = {
+  readonly date: string
+  readonly rr: number
+  readonly lastChange: number
+  readonly elo: number
+  readonly tier: string
+  readonly mapName?: string
+  readonly matchId?: string
 }
 
 export type RoundDecisionComparison = {
@@ -236,6 +247,7 @@ export type PlayerProfile = {
   readonly insights: PerformanceInsights
   readonly roundDetails: RoundDetailInsights
   readonly recentMatches: readonly MatchDigest[]
+  readonly rankHistory: readonly RankPoint[]
 }
 
 export type ProviderResult<T> =

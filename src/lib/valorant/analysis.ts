@@ -59,10 +59,13 @@ export function teamLuckLabel(score: number): string {
   return "매우 좋음"
 }
 
-export function pentagonFromMatches(matches: readonly MatchDigest[]): PentagonScore {
+export function pentagonFromMatches(
+  matches: readonly MatchDigest[],
+  survivalRate?: number,
+): PentagonScore {
   return {
     combat: clampScore(average(matches.map((match) => match.acs)) / 3),
-    survival: clampScore(average(matches.map((match) => match.kast))),
+    survival: clampScore(survivalRate ?? average(matches.map((match) => match.kast))),
     utility: clampScore(average(matches.map((match) => match.tradeValue))),
     control: clampScore(average(matches.map((match) => match.postPlantImpact))),
     entry: clampScore(average(matches.map((match) => match.entryImpact))),

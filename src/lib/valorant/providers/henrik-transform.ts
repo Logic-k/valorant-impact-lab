@@ -11,9 +11,16 @@ import type {
   MatchDetailData,
   MmrData,
   StoredMatchData,
+  StoredMmrHistoryEntry,
 } from "@/lib/valorant/providers/henrik-schemas"
 import { buildRoundDetailInsights } from "@/lib/valorant/round-analysis"
-import type { MatchDigest, PlayerLookup, PlayerProfile, ValorantRegion } from "@/lib/valorant/types"
+import type {
+  MatchDigest,
+  PlayerLookup,
+  PlayerProfile,
+  RankPoint,
+  ValorantRegion,
+} from "@/lib/valorant/types"
 
 type CompetitiveStoredMatch = StoredMatchData & {
   readonly stats: StoredMatchData["stats"] & {
@@ -56,17 +63,36 @@ export function toProfile(
   mmr: MmrData | null,
   matches: readonly StoredMatchData[],
   details: readonly MatchDetailData[] = [],
+  mmrHistory: readonly StoredMmrHistoryEntry[] = [],
 ): PlayerProfile {
   const competitiveMatches = matches.filter(isCompetitiveStoredMatch).map(toDigest)
   const rrDelta = mmr?.current_data?.mmr_change_to_last_game
-  const visibleMatches = applyLatestRrChange(competitiveMatches, rrDelta).slice(0, 10)
   const latestRank = competitiveMatches[0]?.rankAtMatch ?? "Unrated"
   const currentRank = mmr?.current_data?.currenttierpatched ?? mmr?.currenttierpatched
   const currentRr = mmr?.current_data?.ranking_in_tier ?? mmr?.ranking_in_tier ?? 0
   const kills = competitiveMatches.reduce((sum, match) => sum + match.kills, 0)
   const deaths = competitiveMatches.reduce((sum, match) => sum + match.deaths, 0)
   const assists = competitiveMatches.reduce((sum, match) => sum + match.assists, 0)
+  const roundDetails = buildRoundDetailInsights(lookup, details)
+  const outcomesByMatch = new Map(
+    roundDetails.matchReports.map(
+      (report) =>
+        [
+          report.matchId,
+          [...report.rounds]
+            .sort((left, right) => left.round - right.round)
+            .map((round) => round.result),
+        ] as const,
+    ),
+  )
+  const enrichedMatches = competitiveMatches.map((match) =>
+    outcomesByMatch.has(match.id)
+      ? { ...match, roundOutcomes: outcomesByMatch.get(match.id) ?? [] }
+      : match,
+  )
+  const visibleMatches = applyLatestRrChange(enrichedMatches, rrDelta).slice(0, 10)
   const recentTeamLuck = average(visibleMatches.slice(0, 8).map((match) => match.teamLuck))
+  const survivalRate = roundDetails.roundsAnalyzed > 0 ? roundDetails.kastRate : undefined
 
   return {
     displayName: account.name,
@@ -87,7 +113,7 @@ export function toProfile(
       deaths,
       assists,
       kdRatio: ratio(kills, deaths, 2),
-      kast: 0,
+      kast: roundDetails.kastRate,
       adr: averageDecimal(
         competitiveMatches.map((match) => match.adr),
         1,
@@ -99,13 +125,26 @@ export function toProfile(
       teamLuck: average(competitiveMatches.map((match) => match.teamLuck)),
       recentTeamLuck,
     },
-    pentagon: pentagonFromMatches(competitiveMatches),
+    pentagon: pentagonFromMatches(competitiveMatches, survivalRate),
     insights: buildPerformanceInsights(competitiveMatches, {
       storedMatches: matches.length,
       competitiveMatches: competitiveMatches.length,
     }),
-    roundDetails: buildRoundDetailInsights(lookup, details),
+    roundDetails,
     recentMatches: visibleMatches,
+    rankHistory: mmrHistory.map(toRankPoint),
+  }
+}
+
+export function toRankPoint(entry: StoredMmrHistoryEntry): RankPoint {
+  return {
+    date: entry.date,
+    rr: entry.rr,
+    lastChange: entry.last_change,
+    elo: entry.elo,
+    tier: entry.tier?.name ?? "Unrated",
+    ...(entry.map?.name === undefined ? {} : { mapName: entry.map.name }),
+    ...(entry.match_id === undefined ? {} : { matchId: entry.match_id }),
   }
 }
 

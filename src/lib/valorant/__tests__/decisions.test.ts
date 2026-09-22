@@ -195,6 +195,7 @@ function makeProfile(overrides: Partial<PlayerProfile> = {}): PlayerProfile {
     pentagon: { combat: 70, survival: 50, utility: 40, control: 55, entry: 60 },
     insights: makeInsights(),
     roundDetails: makeDetails([]),
+    rankHistory: [],
     recentMatches: [
       makeMatch({ result: "win", acs: 260 }),
       makeMatch({ result: "win", acs: 250 }),

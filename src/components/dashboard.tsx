@@ -11,17 +11,19 @@ import {
 
 import { ProfileTabs } from "@/components/profile-tabs"
 import { teamLuckLabel } from "@/lib/valorant/analysis"
+import type { ValorantAssets } from "@/lib/valorant/assets"
 import type { PlayerLookup, PlayerProfile } from "@/lib/valorant/types"
 
 type DashboardProps = {
   readonly lookup: PlayerLookup
   readonly profile: PlayerProfile
   readonly providerWarning: string | null
+  readonly assets: ValorantAssets
 }
 
 const REGION_OPTIONS = ["na", "eu", "kr", "ap", "br", "latam"] as const
 
-export function Dashboard({ lookup, profile, providerWarning }: DashboardProps) {
+export function Dashboard({ lookup, profile, providerWarning, assets }: DashboardProps) {
   return (
     <main className="shell">
       <section className="topbar" aria-label="검색">
@@ -99,7 +101,7 @@ export function Dashboard({ lookup, profile, providerWarning }: DashboardProps) 
         />
       </section>
 
-      <ProfileTabs profile={profile} />
+      <ProfileTabs assets={assets} profile={profile} />
     </main>
   )
 }

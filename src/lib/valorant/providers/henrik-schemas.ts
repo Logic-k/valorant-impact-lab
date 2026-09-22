@@ -67,6 +67,24 @@ export const StoredMatchesEnvelopeSchema = z.object({
   status: z.number(),
 })
 
+export const StoredMmrHistoryEntrySchema = z
+  .object({
+    date: z.string(),
+    elo: z.number(),
+    last_change: z.number(),
+    map: z.object({ name: z.string() }).passthrough().optional(),
+    match_id: z.string().optional(),
+    rr: z.number(),
+    tier: z.object({ name: z.string() }).passthrough().optional(),
+    was_derank_protected: z.boolean().optional(),
+  })
+  .passthrough()
+
+export const StoredMmrHistoryEnvelopeSchema = z.object({
+  data: z.array(StoredMmrHistoryEntrySchema).nullable(),
+  status: z.number(),
+})
+
 const LocationSchema = z.object({ x: z.number(), y: z.number() }).passthrough()
 
 const AssistantSchema = z
@@ -140,12 +158,27 @@ export const MatchDetailSchema = z
       z
         .object({
           defuse_events: z
-            .object({ defuse_location: LocationSchema.nullable().optional() })
+            .object({
+              defuse_location: LocationSchema.nullable().optional(),
+              defused_by: z
+                .object({ puuid: z.string().optional() })
+                .passthrough()
+                .nullable()
+                .optional(),
+            })
             .passthrough()
             .nullable()
             .optional(),
           plant_events: z
-            .object({ plant_location: LocationSchema.nullable().optional() })
+            .object({
+              plant_location: LocationSchema.nullable().optional(),
+              plant_site: z.string().nullable().optional(),
+              planted_by: z
+                .object({ puuid: z.string().optional() })
+                .passthrough()
+                .nullable()
+                .optional(),
+            })
             .passthrough()
             .nullable()
             .optional(),
@@ -188,3 +221,4 @@ export type AccountData = z.infer<typeof AccountSchema>
 export type MatchDetailData = z.infer<typeof MatchDetailSchema>
 export type MmrData = z.infer<typeof MmrSchema>
 export type StoredMatchData = z.infer<typeof StoredMatchSchema>
+export type StoredMmrHistoryEntry = z.infer<typeof StoredMmrHistoryEntrySchema>

@@ -9,11 +9,52 @@ export function eventsForDetail(
   if (player === undefined) {
     return []
   }
-  return detail.kills.flatMap((kill) => {
+  const killEvents = detail.kills.flatMap((kill) => {
     const round = (kill.round ?? 0) + 1
     const event = eventForKill(detail, player.puuid, round, kill)
     return event === undefined ? [] : [event]
   })
+  const spikeEvents = detail.rounds.flatMap((round, index) =>
+    spikeEventsForRound(detail, player.puuid, index + 1, round),
+  )
+  return [...killEvents, ...spikeEvents]
+}
+
+function spikeEventsForRound(
+  detail: MatchDetailData,
+  puuid: string,
+  roundNumber: number,
+  round: MatchDetailData["rounds"][number],
+): readonly RoundMapEvent[] {
+  const events: RoundMapEvent[] = []
+  const plant = round.plant_events
+  if (plant?.plant_location != null) {
+    const site = plant.plant_site == null ? "" : ` ${plant.plant_site}`
+    const mine = plant.planted_by?.puuid === puuid
+    events.push(
+      mapEvent(
+        detail,
+        roundNumber,
+        "plant",
+        plant.plant_location,
+        `R${roundNumber} Plant${site}${mine ? " (본인)" : ""}`,
+      ),
+    )
+  }
+  const defuse = round.defuse_events
+  if (defuse?.defuse_location != null) {
+    const mine = defuse.defused_by?.puuid === puuid
+    events.push(
+      mapEvent(
+        detail,
+        roundNumber,
+        "defuse",
+        defuse.defuse_location,
+        `R${roundNumber} Defuse${mine ? " (본인)" : ""}`,
+      ),
+    )
+  }
+  return events
 }
 
 function eventForKill(

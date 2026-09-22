@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
-import type { AccountData, MmrData, StoredMatchData } from "@/lib/valorant/providers/henrik-schemas"
-import { toProfile } from "@/lib/valorant/providers/henrik-transform"
+import type {
+  AccountData,
+  MatchDetailData,
+  MmrData,
+  StoredMatchData,
+  StoredMmrHistoryEntry,
+} from "@/lib/valorant/providers/henrik-schemas"
+import { toProfile, toRankPoint } from "@/lib/valorant/providers/henrik-transform"
 import type { PlayerLookup } from "@/lib/valorant/types"
 
 const LOOKUP = {
@@ -45,6 +51,56 @@ const MMR = {
     ranking_in_tier: 55,
   },
 } satisfies MmrData
+
+const MMR_HISTORY_ENTRY = {
+  date: "2026-07-03T10:15:00.000Z",
+  elo: 1582,
+  last_change: 19,
+  map: { name: "Ascent" },
+  match_id: "m-1",
+  rr: 79,
+  tier: { name: "Ascendant 1" },
+} satisfies StoredMmrHistoryEntry
+
+function detailRound(winningTeam: string, puuid: string, team: string) {
+  return {
+    player_stats: [
+      {
+        damage: 140,
+        economy: { loadout_value: 2400, remaining: 600, spent: 1800 },
+        headshots: 0,
+        kills: 1,
+        player_puuid: puuid,
+        player_team: team,
+        score: 320,
+      },
+    ],
+    winning_team: winningTeam,
+  }
+}
+
+const DETAIL = {
+  kills: [],
+  metadata: { map: "Summit", matchid: "85e40f93-7493-4915-85ac-ec0f517c503e" },
+  players: {
+    all_players: [
+      { name: "땡주의솔큐", puuid: "p-me", tag: "가즈아", team: "Red" },
+      { name: "Enemy", puuid: "p-enemy", tag: "T9", team: "Blue" },
+    ],
+  },
+  rounds: [
+    {
+      ...detailRound("Red", "p-me", "Red"),
+      plant_events: {
+        plant_location: { x: -7342, y: 6189 },
+        plant_site: "A",
+        planted_by: { puuid: "p-me" },
+      },
+    },
+    detailRound("Blue", "p-me", "Red"),
+    detailRound("Red", "p-me", "Red"),
+  ],
+} satisfies MatchDetailData
 
 describe("Henrik stored match transform", () => {
   it("uses real stored match stats instead of placeholder match values", () => {
@@ -94,6 +150,74 @@ describe("Henrik stored match transform", () => {
 
     expect(profile.summary.recentTeamLuck).toBe(latestEightAverage)
     expect(profile.summary.recentTeamLuck).not.toBe(profile.summary.teamLuck)
+  })
+})
+
+describe("stored MMR history transform", () => {
+  it("maps stored-mmr-history entries to rank points", () => {
+    const point = toRankPoint(MMR_HISTORY_ENTRY)
+
+    expect(point).toEqual({
+      date: "2026-07-03T10:15:00.000Z",
+      elo: 1582,
+      lastChange: 19,
+      mapName: "Ascent",
+      matchId: "m-1",
+      rr: 79,
+      tier: "Ascendant 1",
+    })
+  })
+
+  it("falls back to Unrated and omits missing optional fields", () => {
+    const point = toRankPoint({
+      date: "2026-07-01T00:00:00.000Z",
+      elo: 900,
+      last_change: -8,
+      rr: 12,
+    })
+
+    expect(point.tier).toBe("Unrated")
+    expect(point.mapName).toBeUndefined()
+    expect(point.matchId).toBeUndefined()
+  })
+
+  it("attaches rank history to the profile", () => {
+    const profile = toProfile(LOOKUP, ACCOUNT, MMR, [STORED_MATCH], [], [MMR_HISTORY_ENTRY])
+
+    expect(profile.rankHistory).toHaveLength(1)
+    expect(profile.rankHistory[0]?.rr).toBe(79)
+    expect(profile.rankHistory[0]?.tier).toBe("Ascendant 1")
+  })
+})
+
+describe("match detail enrichment", () => {
+  it("attaches ordered round outcomes to the matching match card", () => {
+    const profile = toProfile(LOOKUP, ACCOUNT, MMR, [STORED_MATCH], [DETAIL])
+
+    expect(profile.recentMatches[0]?.roundOutcomes).toEqual(["win", "loss", "win"])
+  })
+
+  it("uses the real KAST rate for summary and the survival axis", () => {
+    const profile = toProfile(LOOKUP, ACCOUNT, MMR, [STORED_MATCH], [DETAIL])
+
+    expect(profile.roundDetails.roundsAnalyzed).toBe(3)
+    expect(profile.roundDetails.kastRate).toBe(100)
+    expect(profile.summary.kast).toBe(100)
+    expect(profile.pentagon.survival).toBe(100)
+  })
+
+  it("collects plant events into round detail map events", () => {
+    const profile = toProfile(LOOKUP, ACCOUNT, MMR, [STORED_MATCH], [DETAIL])
+    const plants = profile.roundDetails.mapEvents.filter((event) => event.kind === "plant")
+
+    expect(plants).toHaveLength(1)
+    expect(plants[0]).toMatchObject({
+      mapName: "Summit",
+      matchId: "85e40f93-7493-4915-85ac-ec0f517c503e",
+      round: 1,
+      x: -7342,
+      y: 6189,
+    })
   })
 })
 
