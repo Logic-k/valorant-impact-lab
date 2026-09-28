@@ -1,18 +1,21 @@
 "use client"
 
-import { Html, Line, OrbitControls, useTexture } from "@react-three/drei"
-import { Canvas } from "@react-three/fiber"
-import { Suspense, useMemo, useState } from "react"
-import { CanvasTexture, SRGBColorSpace } from "three"
+import { Html, Line, OrbitControls, PointerLockControls, useTexture } from "@react-three/drei"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
+import { type ComponentRef, Suspense, useEffect, useMemo, useRef, useState } from "react"
+import { CanvasTexture, MathUtils, SRGBColorSpace } from "three"
 
 import { gameToMapFraction, type MapAsset } from "@/lib/valorant/assets"
 import type { RoundMapEvent } from "@/lib/valorant/types"
 
 const BOARD_SIZE = 10
+const BOARD_BOUND = BOARD_SIZE / 2 + 0.4
 const MARKER_HEIGHT = 0.34
-const WALL_HEIGHT = 0.85
+const WALL_HEIGHT = 1.0
 const WALL_SEGMENTS = 224
 const DISPLACEMENT_SIZE = 512
+const EYE_HEIGHT = 0.75
+const ORBIT_CAMERA_POSITION: [number, number, number] = [0, 11, 8.5]
 
 const KIND_COLORS = {
   kill: "#ff5c6c",
@@ -22,6 +25,17 @@ const KIND_COLORS = {
   defuse: "#7aa2ff",
 } as const satisfies Record<RoundMapEvent["kind"], string>
 
+const SUPER_REGION_META: Record<string, { readonly text: string; readonly color: string }> = {
+  A: { color: "#ffd166", text: "A" },
+  B: { color: "#5fd3e6", text: "B" },
+  C: { color: "#c77dff", text: "C" },
+  Mid: { color: "#8fa3bd", text: "MID" },
+  "Attacker Side": { color: "#ff8a80", text: "공격 스폰" },
+  "Defender Side": { color: "#90b8ff", text: "수비 스폰" },
+}
+
+const SITE_RINGS = new Set(["A", "B", "C"])
+
 type MapTacticalBoardProps = {
   readonly events: readonly RoundMapEvent[]
   readonly mapAsset: MapAsset
@@ -29,42 +43,133 @@ type MapTacticalBoardProps = {
 }
 
 export function MapTacticalBoard({ events, mapAsset, rotation }: MapTacticalBoardProps) {
+  const [pov, setPov] = useState(false)
+  const [showCallouts, setShowCallouts] = useState(false)
   const textureUrl = mapAsset.displayIcon
   if (textureUrl === undefined) {
     return null
   }
   return (
-    <Canvas camera={{ fov: 45, position: [0, 11, 8.5] }} dpr={[1, 2]}>
-      <color args={["#0b1219"]} attach="background" />
-      <Suspense fallback={null}>
-        <BoardScene
-          events={events}
-          mapAsset={mapAsset}
-          rotation={rotation}
-          textureUrl={textureUrl}
-        />
-      </Suspense>
-      <OrbitControls
-        dampingFactor={0.08}
-        enableDamping
-        makeDefault
-        maxDistance={26}
-        maxPolarAngle={Math.PI / 2.15}
-        minDistance={4}
-      />
-    </Canvas>
+    <>
+      <Canvas camera={{ fov: 55, position: ORBIT_CAMERA_POSITION }} dpr={[1, 2]}>
+        <color args={["#0b1219"]} attach="background" />
+        <CameraReset pov={pov} />
+        <Suspense fallback={null}>
+          <BoardScene
+            events={events}
+            mapAsset={mapAsset}
+            rotation={rotation}
+            showCallouts={showCallouts}
+            textureUrl={textureUrl}
+          />
+        </Suspense>
+        {pov ? (
+          <PovControls />
+        ) : (
+          <OrbitControls
+            dampingFactor={0.08}
+            enableDamping
+            makeDefault
+            maxDistance={26}
+            maxPolarAngle={Math.PI / 2.15}
+            minDistance={4}
+          />
+        )}
+      </Canvas>
+      <div className="map-3d-controls">
+        <button
+          aria-pressed={pov}
+          className={`map-view-toggle${pov ? " on" : ""}`}
+          onClick={() => setPov((value) => !value)}
+          type="button"
+        >
+          {pov ? "전술 뷰" : "POV 입장"}
+        </button>
+        <button
+          aria-pressed={showCallouts}
+          className={`map-view-toggle${showCallouts ? " on" : ""}`}
+          onClick={() => setShowCallouts((value) => !value)}
+          type="button"
+        >
+          콜아웃
+        </button>
+      </div>
+      {pov ? (
+        <p className="map-3d-pov-hint">캔버스 클릭 → 마우스 시점 · WASD 이동 · ESC 해제</p>
+      ) : null}
+    </>
   )
+}
+
+function CameraReset({ pov }: { readonly pov: boolean }) {
+  const camera = useThree((state) => state.camera)
+  useEffect(() => {
+    if (!pov) {
+      camera.position.set(...ORBIT_CAMERA_POSITION)
+      camera.lookAt(0, 0, 0)
+    }
+  }, [pov, camera])
+  return null
+}
+
+function PovControls() {
+  const controlsRef = useRef<ComponentRef<typeof PointerLockControls>>(null)
+  const keys = useRef(new Set<string>())
+  const camera = useThree((state) => state.camera)
+
+  useEffect(() => {
+    camera.position.set(0, EYE_HEIGHT, BOARD_SIZE * 0.6)
+    camera.lookAt(0, EYE_HEIGHT, 0)
+  }, [camera])
+
+  useEffect(() => {
+    const down = (event: KeyboardEvent) => keys.current.add(event.code)
+    const up = (event: KeyboardEvent) => keys.current.delete(event.code)
+    window.addEventListener("keydown", down)
+    window.addEventListener("keyup", up)
+    return () => {
+      window.removeEventListener("keydown", down)
+      window.removeEventListener("keyup", up)
+    }
+  }, [])
+
+  useFrame((_, delta) => {
+    const controls = controlsRef.current
+    if (controls === null || !controls.isLocked) {
+      return
+    }
+    const step = delta * 4.5
+    if (keys.current.has("KeyW")) {
+      controls.moveForward(step)
+    }
+    if (keys.current.has("KeyS")) {
+      controls.moveForward(-step)
+    }
+    if (keys.current.has("KeyA")) {
+      controls.moveRight(-step)
+    }
+    if (keys.current.has("KeyD")) {
+      controls.moveRight(step)
+    }
+    camera.position.x = MathUtils.clamp(camera.position.x, -BOARD_BOUND, BOARD_BOUND)
+    camera.position.z = MathUtils.clamp(camera.position.z, -BOARD_BOUND, BOARD_BOUND)
+    camera.position.y = EYE_HEIGHT
+  })
+
+  return <PointerLockControls makeDefault ref={controlsRef} />
 }
 
 function BoardScene({
   events,
   mapAsset,
   rotation,
+  showCallouts,
   textureUrl,
 }: {
   readonly events: readonly RoundMapEvent[]
   readonly mapAsset: MapAsset
   readonly rotation: number
+  readonly showCallouts: boolean
   readonly textureUrl: string
 }) {
   const texture = useTexture(textureUrl)
@@ -110,6 +215,16 @@ function BoardScene({
     [placed, mapAsset],
   )
 
+  const regions = useMemo(() => regionLabels(mapAsset), [mapAsset])
+  const callouts = useMemo(
+    () =>
+      (mapAsset.callouts ?? []).map((callout) => ({
+        label: callout.regionName,
+        position: boardPosition(mapAsset, callout.x, callout.y),
+      })),
+    [mapAsset],
+  )
+
   return (
     <group rotation={[0, (rotation * Math.PI) / 180, 0]}>
       <ambientLight intensity={0.9} />
@@ -127,6 +242,33 @@ function BoardScene({
           map={texture}
         />
       </mesh>
+      {regions.map((region) => (
+        <group key={region.key} position={region.position}>
+          {SITE_RINGS.has(region.key) ? (
+            <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <ringGeometry args={[0.55, 0.68, 40]} />
+              <meshBasicMaterial color={region.color} opacity={0.5} transparent />
+            </mesh>
+          ) : null}
+          <Html center distanceFactor={15} position={[0, 1.9, 0]}>
+            <div className="map-3d-site" style={{ borderColor: region.color, color: region.color }}>
+              {region.text}
+            </div>
+          </Html>
+        </group>
+      ))}
+      {showCallouts
+        ? callouts.map((callout) => (
+            <Html
+              center
+              distanceFactor={22}
+              key={callout.label}
+              position={[callout.position[0], 1.05, callout.position[2]]}
+            >
+              <div className="map-3d-callout">{callout.label}</div>
+            </Html>
+          ))
+        : null}
       {trajectories.map((trajectory) => (
         <Line
           color={trajectory.color}
@@ -161,7 +303,7 @@ function EventMarker({
       }}
       position={position}
     >
-      <MarkerShape kind={event.kind} hovered={hovered} />
+      <MarkerShape hovered={hovered} kind={event.kind} />
       {hovered ? (
         <Html center distanceFactor={14} position={[0, 1.05, 0]}>
           <div className="map-3d-tooltip">{event.label}</div>
@@ -233,6 +375,36 @@ function MarkerShape({
         </mesh>
       )
   }
+}
+
+function regionLabels(
+  mapAsset: MapAsset,
+): { key: string; color: string; position: [number, number, number]; text: string }[] {
+  const groups = new Map<string, { x: number; y: number }[]>()
+  for (const callout of mapAsset.callouts ?? []) {
+    const key = callout.superRegionName
+    if (key === undefined) {
+      continue
+    }
+    groups.set(key, [...(groups.get(key) ?? []), { x: callout.x, y: callout.y }])
+  }
+  const labels: { key: string; color: string; position: [number, number, number]; text: string }[] =
+    []
+  for (const [key, points] of groups) {
+    const meta = SUPER_REGION_META[key]
+    if (meta === undefined || points.length === 0) {
+      continue
+    }
+    const cx = points.reduce((sum, point) => sum + point.x, 0) / points.length
+    const cy = points.reduce((sum, point) => sum + point.y, 0) / points.length
+    labels.push({
+      color: meta.color,
+      key,
+      position: boardPosition(mapAsset, cx, cy),
+      text: meta.text,
+    })
+  }
+  return labels
 }
 
 function buildDisplacementMap(image: unknown): CanvasTexture | undefined {
