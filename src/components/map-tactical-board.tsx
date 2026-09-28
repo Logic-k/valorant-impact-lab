@@ -249,11 +249,12 @@ function buildDisplacementMap(image: unknown): CanvasTexture | undefined {
   ctx.filter = "blur(3px)"
   ctx.drawImage(image, 0, 0, DISPLACEMENT_SIZE, DISPLACEMENT_SIZE)
   const pixels = ctx.getImageData(0, 0, DISPLACEMENT_SIZE, DISPLACEMENT_SIZE)
+  const FLOOR_CUTOFF = 95
   for (let i = 0; i < pixels.data.length; i += 4) {
     const alpha = (pixels.data[i + 3] ?? 0) / 255
     const luminance =
       (((pixels.data[i] ?? 0) + (pixels.data[i + 1] ?? 0) + (pixels.data[i + 2] ?? 0)) / 3) * alpha
-    const height = Math.min(255, luminance * 2.4)
+    const height = luminance <= FLOOR_CUTOFF ? 0 : Math.min(255, (luminance - FLOOR_CUTOFF) * 3.2)
     pixels.data[i] = height
     pixels.data[i + 1] = height
     pixels.data[i + 2] = height
