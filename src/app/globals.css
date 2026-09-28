@@ -22,11 +22,7 @@ body {
   background:
     linear-gradient(135deg, rgba(56, 232, 198, 0.05), transparent 32rem),
     radial-gradient(circle at 80% 0%, rgba(255, 70, 85, 0.14), transparent 26rem),
-    repeating-linear-gradient(
-      -45deg,
-      transparent 0 6px,
-      rgba(255, 255, 255, 0.012) 6px 7px
-    ),
+    repeating-linear-gradient(-45deg, transparent 0 6px, rgba(255, 255, 255, 0.012) 6px 7px),
     var(--bg);
   color: var(--text);
   font-family: var(--font-body);
@@ -127,7 +123,14 @@ h1 {
   height: 42px;
   border: 0;
   background: var(--accent);
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  clip-path: polygon(
+    0 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% 100%,
+    10px 100%,
+    0 calc(100% - 10px)
+  );
   color: #1a0609;
   font-weight: 800;
   cursor: pointer;
@@ -1215,11 +1218,26 @@ h1 {
   padding: 8px 10px;
 }
 
-.map-kind-toggle.on.kill { color: #ff98a3; border-color: rgba(255, 92, 108, 0.5); }
-.map-kind-toggle.on.death { color: #ece8e1; border-color: rgba(236, 232, 225, 0.5); }
-.map-kind-toggle.on.assist { color: #8de8b0; border-color: rgba(95, 211, 142, 0.5); }
-.map-kind-toggle.on.plant { color: #f0ce91; border-color: rgba(240, 195, 106, 0.55); }
-.map-kind-toggle.on.defuse { color: #a9c4ff; border-color: rgba(122, 162, 255, 0.55); }
+.map-kind-toggle.on.kill {
+  color: #ff98a3;
+  border-color: rgba(255, 92, 108, 0.5);
+}
+.map-kind-toggle.on.death {
+  color: #ece8e1;
+  border-color: rgba(236, 232, 225, 0.5);
+}
+.map-kind-toggle.on.assist {
+  color: #8de8b0;
+  border-color: rgba(95, 211, 142, 0.5);
+}
+.map-kind-toggle.on.plant {
+  color: #f0ce91;
+  border-color: rgba(240, 195, 106, 0.55);
+}
+.map-kind-toggle.on.defuse {
+  color: #a9c4ff;
+  border-color: rgba(122, 162, 255, 0.55);
+}
 
 .map-view-toggles {
   display: flex;
@@ -1279,11 +1297,31 @@ h1 {
   height: 100%;
 }
 
-.map-dot.kill circle { fill: rgba(255, 92, 108, 0.9); stroke: #ffb3ba; stroke-width: 0.4; }
-.map-dot.death circle { fill: rgba(236, 232, 225, 0.9); stroke: #8b9bab; stroke-width: 0.4; }
-.map-dot.assist circle { fill: rgba(95, 211, 142, 0.9); stroke: #c9f5db; stroke-width: 0.4; }
-.map-dot.plant circle { fill: rgba(240, 195, 106, 0.95); stroke: #fbe2ae; stroke-width: 0.4; }
-.map-dot.defuse circle { fill: rgba(122, 162, 255, 0.95); stroke: #d3e0ff; stroke-width: 0.4; }
+.map-dot.kill circle {
+  fill: rgba(255, 92, 108, 0.9);
+  stroke: #ffb3ba;
+  stroke-width: 0.4;
+}
+.map-dot.death circle {
+  fill: rgba(236, 232, 225, 0.9);
+  stroke: #8b9bab;
+  stroke-width: 0.4;
+}
+.map-dot.assist circle {
+  fill: rgba(95, 211, 142, 0.9);
+  stroke: #c9f5db;
+  stroke-width: 0.4;
+}
+.map-dot.plant circle {
+  fill: rgba(240, 195, 106, 0.95);
+  stroke: #fbe2ae;
+  stroke-width: 0.4;
+}
+.map-dot.defuse circle {
+  fill: rgba(122, 162, 255, 0.95);
+  stroke: #d3e0ff;
+  stroke-width: 0.4;
+}
 
 .map-events-legend {
   display: grid;
@@ -1309,11 +1347,51 @@ h1 {
   color: var(--text);
 }
 
-.map-events-legend .legend-kill { color: #ff98a3; }
-.map-events-legend .legend-death { color: #ece8e1; }
-.map-events-legend .legend-assist { color: #8de8b0; }
-.map-events-legend .legend-plant { color: #f0ce91; }
-.map-events-legend .legend-defuse { color: #a9c4ff; }
+.map-events-legend .legend-kill {
+  color: #ff98a3;
+}
+.map-events-legend .legend-death {
+  color: #ece8e1;
+}
+.map-events-legend .legend-assist {
+  color: #8de8b0;
+}
+.map-events-legend .legend-plant {
+  color: #f0ce91;
+}
+.map-events-legend .legend-defuse {
+  color: #a9c4ff;
+}
+
+.minimap-3d canvas {
+  cursor: grab;
+  display: block;
+}
+
+.minimap-3d:active canvas {
+  cursor: grabbing;
+}
+
+.map-3d-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.map-3d-tooltip {
+  background: rgba(10, 16, 24, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 8px;
+  pointer-events: none;
+  white-space: nowrap;
+}
 
 .map-events-empty {
   border: 1px dashed var(--line);

@@ -96,6 +96,8 @@ export type RoundMapEvent = {
   readonly kind: "kill" | "death" | "assist" | "plant" | "defuse"
   readonly x: number
   readonly y: number
+  readonly originX?: number
+  readonly originY?: number
   readonly label: string
 }
 

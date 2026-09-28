@@ -1,5 +1,6 @@
 "use client"
 
+import dynamic from "next/dynamic"
 import Image from "next/image"
 import { useMemo, useState } from "react"
 
@@ -21,12 +22,24 @@ const KIND_META = {
 
 const ALL_KINDS = Object.keys(KIND_META) as readonly RoundMapEvent["kind"][]
 
+const MapTacticalBoard = dynamic(
+  () => import("@/components/map-tactical-board").then((mod) => mod.MapTacticalBoard),
+  {
+    loading: () => (
+      <div className="minimap-fallback">
+        <p className="muted-copy">3D 전술판 로딩 중…</p>
+      </div>
+    ),
+    ssr: false,
+  },
+)
+
 export function MapEventsPanel({ events, maps }: MapEventsPanelProps) {
   const mapNames = useMemo(() => [...new Set(events.map((event) => event.mapName))], [events])
   const [mapName, setMapName] = useState<string | null>(null)
   const [enabled, setEnabled] = useState<ReadonlySet<RoundMapEvent["kind"]>>(new Set(ALL_KINDS))
   const [roundMax, setRoundMax] = useState<number | null>(null)
-  const [mode, setMode] = useState<"scatter" | "heat">("scatter")
+  const [mode, setMode] = useState<"scatter" | "heat" | "3d">("scatter")
   const [rotation, setRotation] = useState(0)
 
   const activeMap = mapName ?? mapNames[0]
@@ -108,6 +121,14 @@ export function MapEventsPanel({ events, maps }: MapEventsPanelProps) {
             히트맵
           </button>
           <button
+            aria-pressed={mode === "3d"}
+            className={`map-view-toggle${mode === "3d" ? " on" : ""}`}
+            onClick={() => setMode("3d")}
+            type="button"
+          >
+            3D 전술판
+          </button>
+          <button
             className="map-view-toggle"
             onClick={() => setRotation((value) => (value + 90) % 360)}
             type="button"
@@ -130,6 +151,11 @@ export function MapEventsPanel({ events, maps }: MapEventsPanelProps) {
         {mapAsset?.displayIcon === undefined ? (
           <div className="minimap-fallback">
             <p className="muted-copy">{activeMap} 미니맵 이미지를 불러오지 못했습니다.</p>
+          </div>
+        ) : mode === "3d" && mapAsset !== undefined ? (
+          <div className="minimap minimap-3d">
+            <MapTacticalBoard events={visible} mapAsset={mapAsset} rotation={rotation} />
+            <p className="map-3d-hint">드래그 회전 · 휠 줌 · 마커 호버 시 라벨</p>
           </div>
         ) : (
           <div className="minimap" style={{ transform: `rotate(${rotation}deg)` }}>
