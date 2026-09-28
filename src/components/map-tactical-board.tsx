@@ -219,6 +219,7 @@ function BoardScene({
   const callouts = useMemo(
     () =>
       (mapAsset.callouts ?? []).map((callout) => ({
+        key: `${callout.regionName}-${callout.x}-${callout.y}`,
         label: callout.regionName,
         position: boardPosition(mapAsset, callout.x, callout.y),
       })),
@@ -262,7 +263,7 @@ function BoardScene({
             <Html
               center
               distanceFactor={22}
-              key={callout.label}
+              key={callout.key}
               position={[callout.position[0], 1.05, callout.position[2]]}
             >
               <div className="map-3d-callout">{callout.label}</div>
