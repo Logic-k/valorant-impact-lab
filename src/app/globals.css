@@ -1363,6 +1363,83 @@ h1 {
   color: #a9c4ff;
 }
 
+.minimap-3d canvas {
+  cursor: grab;
+  display: block;
+}
+
+.minimap-3d:active canvas {
+  cursor: grabbing;
+}
+
+.map-3d-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.map-3d-tooltip {
+  background: rgba(10, 16, 24, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 8px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.map-3d-controls {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 6px;
+}
+
+.map-3d-controls .map-view-toggle {
+  background: rgba(10, 16, 24, 0.85);
+  padding: 6px 9px;
+}
+
+.map-3d-pov-hint {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  margin: 0;
+  color: var(--accent);
+  font-size: 11px;
+  pointer-events: none;
+}
+
+.map-3d-site {
+  background: rgba(10, 16, 24, 0.82);
+  border: 2px solid;
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 8px 11px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.map-3d-callout {
+  background: rgba(10, 16, 24, 0.72);
+  border-radius: 4px;
+  color: #b9c6d6;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
 .map-events-empty {
   border: 1px dashed var(--line);
   border-radius: 8px;

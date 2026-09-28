@@ -67,10 +67,27 @@ function eventForKill(
     (location) => location.player_puuid === puuid,
   )
   if (kill.killer_puuid === puuid && kill.victim_death_location !== undefined) {
-    return mapEvent(detail, round, "kill", kill.victim_death_location, `R${round} Kill`)
+    return mapEvent(
+      detail,
+      round,
+      "kill",
+      kill.victim_death_location,
+      `R${round} Kill`,
+      playerLocation?.location,
+    )
   }
   if (kill.victim_puuid === puuid && kill.victim_death_location !== undefined) {
-    return mapEvent(detail, round, "death", kill.victim_death_location, `R${round} Death`)
+    const killerLocation = kill.player_locations_on_kill.find(
+      (location) => location.player_puuid === kill.killer_puuid,
+    )
+    return mapEvent(
+      detail,
+      round,
+      "death",
+      kill.victim_death_location,
+      `R${round} Death`,
+      killerLocation?.location,
+    )
   }
   if (assisted(kill.assistants, puuid) && playerLocation !== undefined) {
     return mapEvent(detail, round, "assist", playerLocation.location, `R${round} Assist`)
@@ -84,6 +101,7 @@ function mapEvent(
   kind: RoundMapEvent["kind"],
   location: { readonly x: number; readonly y: number },
   label: string,
+  origin?: { readonly x: number; readonly y: number },
 ): RoundMapEvent {
   return {
     matchId: matchId(detail),
@@ -92,6 +110,7 @@ function mapEvent(
     kind,
     x: location.x,
     y: location.y,
+    ...(origin === undefined ? {} : { originX: origin.x, originY: origin.y }),
     label,
   }
 }

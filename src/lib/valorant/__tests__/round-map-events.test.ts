@@ -35,7 +35,10 @@ const DETAIL = {
       kill_time_in_round: 30000,
       killer_puuid: "p-enemy",
       killer_team: "Red",
-      player_locations_on_kill: [],
+      player_locations_on_kill: [
+        { location: { x: -2200, y: 800 }, player_puuid: "p-enemy" },
+        { location: { x: -4800, y: 600 }, player_puuid: "p-me" },
+      ],
       round: 1,
       victim_death_location: { x: -5000, y: 500 },
       victim_puuid: "p-me",
@@ -113,13 +116,21 @@ describe("eventsForDetail", () => {
     expect(kill).toMatchObject({
       mapName: "Ascent",
       matchId: "match-evt-1",
+      originX: -4000,
+      originY: 1000,
       round: 1,
       x: -7300,
       y: 6000,
     })
 
     const death = events.find((event) => event.kind === "death")
-    expect(death).toMatchObject({ round: 2, x: -5000, y: 500 })
+    expect(death).toMatchObject({
+      originX: -2200,
+      originY: 800,
+      round: 2,
+      x: -5000,
+      y: 500,
+    })
 
     const assist = events.find((event) => event.kind === "assist")
     expect(assist).toMatchObject({ round: 2, x: -6000, y: 2000 })

@@ -4,11 +4,20 @@ import { z } from "zod"
 const ASSETS_BASE_URL = "https://valorant-api.com/v1"
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
+const CalloutSchema = z
+  .object({
+    regionName: z.string(),
+    superRegionName: z.string().nullable().optional(),
+    location: z.object({ x: z.number(), y: z.number() }).passthrough(),
+  })
+  .passthrough()
+
 const MapSchema = z.object({
   displayName: z.string(),
   displayIcon: z.string().nullable().optional(),
   splash: z.string().nullable().optional(),
   listViewIcon: z.string().nullable().optional(),
+  callouts: z.array(CalloutSchema).nullable().optional(),
   xMultiplier: z.number().default(0),
   yMultiplier: z.number().default(0),
   xScalarToAdd: z.number().default(0),
@@ -24,11 +33,19 @@ const AgentSchema = z.object({
 
 const AssetsEnvelopeSchema = <T extends z.ZodType>(item: T) => z.object({ data: z.array(item) })
 
+export type MapCallout = {
+  readonly regionName: string
+  readonly superRegionName?: string
+  readonly x: number
+  readonly y: number
+}
+
 export type MapAsset = {
   readonly name: string
   readonly displayIcon?: string
   readonly splash?: string
   readonly listViewIcon?: string
+  readonly callouts?: readonly MapCallout[]
   readonly xMultiplier: number
   readonly yMultiplier: number
   readonly xScalarToAdd: number
@@ -105,10 +122,20 @@ function toMapAsset(row: z.infer<typeof MapSchema>): MapAsset {
     ...(row.displayIcon == null ? {} : { displayIcon: row.displayIcon }),
     ...(row.splash == null ? {} : { splash: row.splash }),
     ...(row.listViewIcon == null ? {} : { listViewIcon: row.listViewIcon }),
+    ...(row.callouts == null ? {} : { callouts: row.callouts.map(toCallout) }),
     xMultiplier: row.xMultiplier,
     yMultiplier: row.yMultiplier,
     xScalarToAdd: row.xScalarToAdd,
     yScalarToAdd: row.yScalarToAdd,
+  }
+}
+
+function toCallout(row: z.infer<typeof CalloutSchema>): MapCallout {
+  return {
+    regionName: row.regionName,
+    ...(row.superRegionName == null ? {} : { superRegionName: row.superRegionName }),
+    x: row.location.x,
+    y: row.location.y,
   }
 }
 
