@@ -3,13 +3,16 @@
 import { Html, Line, OrbitControls, useTexture } from "@react-three/drei"
 import { Canvas } from "@react-three/fiber"
 import { Suspense, useMemo, useState } from "react"
-import { SRGBColorSpace } from "three"
+import { CanvasTexture, SRGBColorSpace } from "three"
 
 import { gameToMapFraction, type MapAsset } from "@/lib/valorant/assets"
 import type { RoundMapEvent } from "@/lib/valorant/types"
 
 const BOARD_SIZE = 10
 const MARKER_HEIGHT = 0.34
+const WALL_HEIGHT = 0.85
+const WALL_SEGMENTS = 224
+const DISPLACEMENT_SIZE = 512
 
 const KIND_COLORS = {
   kill: "#ff5c6c",
@@ -68,6 +71,7 @@ function BoardScene({
   useMemo(() => {
     texture.colorSpace = SRGBColorSpace
   }, [texture])
+  const displacement = useMemo(() => buildDisplacementMap(texture.image), [texture])
 
   const placed = useMemo(
     () =>
@@ -115,8 +119,13 @@ function BoardScene({
         <meshStandardMaterial color="#101a26" />
       </mesh>
       <mesh position={[0, 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[BOARD_SIZE, BOARD_SIZE]} />
-        <meshStandardMaterial map={texture} />
+        <planeGeometry args={[BOARD_SIZE, BOARD_SIZE, WALL_SEGMENTS, WALL_SEGMENTS]} />
+        <meshStandardMaterial
+          displacementBias={0}
+          displacementMap={displacement ?? null}
+          displacementScale={WALL_HEIGHT}
+          map={texture}
+        />
       </mesh>
       {trajectories.map((trajectory) => (
         <Line
@@ -224,6 +233,34 @@ function MarkerShape({
         </mesh>
       )
   }
+}
+
+function buildDisplacementMap(image: unknown): CanvasTexture | undefined {
+  if (!(image instanceof HTMLImageElement)) {
+    return undefined
+  }
+  const canvas = document.createElement("canvas")
+  canvas.width = DISPLACEMENT_SIZE
+  canvas.height = DISPLACEMENT_SIZE
+  const ctx = canvas.getContext("2d")
+  if (ctx === null) {
+    return undefined
+  }
+  ctx.filter = "blur(3px)"
+  ctx.drawImage(image, 0, 0, DISPLACEMENT_SIZE, DISPLACEMENT_SIZE)
+  const pixels = ctx.getImageData(0, 0, DISPLACEMENT_SIZE, DISPLACEMENT_SIZE)
+  for (let i = 0; i < pixels.data.length; i += 4) {
+    const alpha = (pixels.data[i + 3] ?? 0) / 255
+    const luminance =
+      (((pixels.data[i] ?? 0) + (pixels.data[i + 1] ?? 0) + (pixels.data[i + 2] ?? 0)) / 3) * alpha
+    const height = Math.min(255, luminance * 2.4)
+    pixels.data[i] = height
+    pixels.data[i + 1] = height
+    pixels.data[i + 2] = height
+    pixels.data[i + 3] = 255
+  }
+  ctx.putImageData(pixels, 0, 0)
+  return new CanvasTexture(canvas)
 }
 
 function boardPosition(mapAsset: MapAsset, x: number, y: number): [number, number, number] {
