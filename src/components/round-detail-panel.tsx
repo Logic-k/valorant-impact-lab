@@ -1,5 +1,11 @@
 import { MatchContributionList } from "@/components/match-contribution-list"
-import type { RoundDetailInsights } from "@/lib/valorant/types"
+import type { BuyType, RoundDetailInsights } from "@/lib/valorant/types"
+
+const BUY_LABELS: Record<BuyType, string> = {
+  eco: "에코",
+  semi: "세미/포스",
+  full: "풀바이",
+}
 
 type RoundDetailPanelProps = {
   readonly details: RoundDetailInsights
@@ -19,8 +25,48 @@ export function RoundDetailPanel({ details }: RoundDetailPanelProps) {
         <RoundMetric label="트레이드" value={`${details.tradeRate}%`} />
         <RoundMetric label="클러치" value={`${details.clutchWins}/${details.clutchAttempts}`} />
         <RoundMetric label="첫 데스" value={details.firstDeaths} />
-        <RoundMetric label="언트레이드" value={details.untradedDeaths} />
+        <RoundMetric
+          label="언트레이드"
+          value={`${details.untradedDeaths} (교환 가능 ${details.tradeableUntradedDeaths})`}
+        />
       </div>
+      <div className="round-metrics">
+        <RoundMetric
+          label="오프닝 듀얼"
+          value={`${details.openingDuel.successRate}% (${details.openingDuel.duels}회)`}
+        />
+        <RoundMetric label="오프닝 참여" value={`${details.openingDuel.participationRate}%`} />
+        <RoundMetric
+          label="5v4 전환"
+          value={`${details.openingDuel.teamFirstKillConversion}% (${details.openingDuel.teamFirstKillRounds}R)`}
+        />
+        <RoundMetric
+          label="4v5 역전"
+          value={`${details.openingDuel.teamFirstDeathRecovery}% (${details.openingDuel.teamFirstDeathRounds}R)`}
+        />
+        <RoundMetric
+          label="클러치 상세"
+          value={
+            details.clutchBreakdown.length === 0
+              ? "-"
+              : details.clutchBreakdown
+                  .map((entry) => `1v${entry.size} ${entry.wins}/${entry.attempts}`)
+                  .join(" · ")
+          }
+        />
+        <RoundMetric label="경제 효율" value={details.econRating} />
+      </div>
+      {details.buyBreakdown.length === 0 ? null : (
+        <div className="round-signal-strip">
+          {details.buyBreakdown.map((entry) => (
+            <Signal
+              key={entry.buyType}
+              label={`${BUY_LABELS[entry.buyType]} 승률`}
+              value={`${entry.winRate}% (${entry.rounds}R, 미스매치 ${entry.mismatchRounds}R ${entry.mismatchWinRate}%)`}
+            />
+          ))}
+        </div>
+      )}
       <div className="round-signal-strip">
         <Signal label="첫 킬" value={details.firstBloods} />
         <Signal label="고기여 패배" value={details.highImpactLosses} />

@@ -45,14 +45,24 @@ export function roundQuestions(): readonly DecisionQuestion[] {
   ]
 }
 
+const OPENING_LABELS: Record<RoundReport["openingTeam"], string> = {
+  own: "팀 첫 킬(5v4 시작)",
+  enemy: "팀 첫 사망(4v5 시작)",
+  none: "킬 없음",
+}
+
 export function roundState(round: RoundReport): string {
   const flags = [
     round.survived ? "생존" : "사망",
     round.traded ? "교환됨" : null,
     round.firstBlood ? "첫 킬" : null,
     round.firstDeath ? "첫 데스" : null,
-    round.untradedDeath ? "미교환 사망" : null,
-    round.clutchAttempt ? "클러치 시도" : null,
+    round.untradedDeath
+      ? round.tradeableDeath
+        ? "미교환 사망(아군 교환 가능 거리)"
+        : "미교환 사망(고립 포지션)"
+      : null,
+    round.clutchAttempt ? `1v${round.clutchSize} 클러치 시도` : null,
     round.clutchWin ? "클러치 성공" : null,
     round.kast ? "KAST 달성" : "KAST 실패",
   ].filter((flag) => flag !== null)
@@ -60,6 +70,8 @@ export function roundState(round: RoundReport): string {
     `맵 ${round.mapName} / 라운드 ${round.round} / 결과 ${round.result === "win" ? "승리" : "패배"}`,
     `기록: ${round.kills}킬 ${round.assists}어시 ${round.damage}딜 점수${round.score} / 기여 점수 ${round.contributionScore}`,
     `경제: 로드아웃 ${round.loadoutValue} / 소비 ${round.spent} / 잔여 ${round.remaining} / 무기 ${round.weaponName} / 방어구 ${round.armorName}`,
+    `팀 경제: 아군 ${round.buyType} vs 상대 ${round.enemyBuyType} (로드아웃 차 ${round.loadoutDelta}) / 경제 효율 ${round.econRating}`,
+    `오프닝: ${OPENING_LABELS[round.openingTeam]}`,
     `상태: ${flags.join(", ")}`,
   ].join("\n")
 }
